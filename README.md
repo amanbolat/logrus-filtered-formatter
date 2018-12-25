@@ -2,7 +2,7 @@
 Use this formatter to log json with filtered fields
 
 ## Usage
-```
+```go
 package main
 
 import (
@@ -19,13 +19,17 @@ func main() {
 	log.Formatter = filtered.New(fields, &logrus.JSONFormatter{})
 
 	log.WithFields(logrus.Fields{
-		"password": "asdfasdf",
-		"email":    "johndoe@gmail.com",
+		"_password_": "asdfasdf",
+		"email_field":    "johndoe@gmail.com",
 		"name":     "john doe",
 	}).Info("new user created")
 }
 ```
 Output:
+```json
+{"email_field":"[FILTERED]","level":"info","msg":"new user created","name":"john doe","_password_":"[FILTERED]","time":"2017-10-05T16:05:29+07:00"}
 ```
-{"email":[FILTERED],"level":"info","msg":"new user created","name":"john doe","password":[FILTERED],"time":"2017-10-05T16:05:29+07:00"}
-```
+
+Formatter filtered fields and log entries name can be in any case and contain whitespaces. 
+Formatter will normalize both and check so if you have fields in logs like `email_address`, `old email`, 
+`customer_email`, just add `email` field to formatter and it will filter all logs which contain emails.

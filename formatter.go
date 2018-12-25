@@ -7,23 +7,47 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const defaultFilteredValue = "[FILTERED]"
+var alphaNumericReg = regexp.MustCompile("[^a-zA-Z0-9]+")
+
 // Formatter formats logs with filtered fields
 type Formatter struct {
 	formatter logrus.Formatter
-	filter    *regexp.Regexp
+	fields map[string]bool
+	FilteredValue string
 }
 
 // New returns an instance of logrus formatter
 func New(fields []string, formatter logrus.Formatter) *Formatter {
+	m := make(map[string]bool)
+	for _, f := range fields {
+		m[normalizeString(f)] = true
+	}
 	return &Formatter{
 		formatter: formatter,
-		filter:    regexp.MustCompile(`"(` + strings.Join(fields, "|") + `)":\s*"*(\d*|true|false|([^"]*)")"*(,\s*|\s*\n?\s*})`),
+		fields: m,
+		FilteredValue: defaultFilteredValue,
 	}
 }
 
 // Format renders a single log entry
 func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
+	for k := range entry.Data {
+		for filterKey := range f.fields {
+			normalizedField := normalizeString(k)
+			if strings.Contains(normalizedField, filterKey) {
+				entry.Data[k] = f.FilteredValue
+			}
+		}
+	}
+
 	data, err := f.formatter.Format(entry)
-	data = f.filter.ReplaceAll(data, []byte(`"$1":"[FILTERED]"$4`))
 	return data, err
+}
+
+func normalizeString(str string) string {
+	s := strings.ToLower(str)
+	s = alphaNumericReg.ReplaceAllString(s, "")
+
+	return s
 }
