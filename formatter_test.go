@@ -1,7 +1,6 @@
 package filtered_test
 
 import (
-	"encoding/json"
 	"github.com/amanbolat/logrus-filtered-formatter"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -25,18 +24,40 @@ func TestFormatter_Format(t *testing.T) {
 		"FirstName": "John",
 		"first_name_old": "Marina",
 		"old credit card": "111 222 3333 4444",
+		"req": map[string] interface{}{
+			"password": "some_nested_password",
+			"nested": map[string]interface{}{
+				"first_name": "John Doe",
+			},
+		},
+	}
+
+	expectedFilteredFields := map[string]interface{}{
+		"password": "[FILTERED]",
+		"PassWORD": "[FILTERED]",
+		"super_password_field": "[FILTERED]",
+		"password ": "[FILTERED]",
+		"credit card": "[FILTERED]",
+		"last name": "[FILTERED]",
+		"FirstName": "[FILTERED]",
+		"first_name_old": "[FILTERED]",
+		"old credit card": "[FILTERED]",
+		"req": map[string] interface{}{
+			"password": "[FILTERED]",
+			"nested": map[string]interface{}{
+				"first_name": "[FILTERED]",
+			},
+		},
 	}
 
 	formatter := filtered.New(fields, &logrus.JSONFormatter{})
+	actual, err := formatter.Format(logrus.WithFields(mustFilteredFields))
 
-	for k, v := range mustFilteredFields {
-		b, err := formatter.Format(logrus.WithField(k, v))
-		assert.NoError(t, err)
+	jsonFormatter := &logrus.JSONFormatter{}
+	expected, err := jsonFormatter.Format(logrus.WithFields(expectedFilteredFields))
 
-		entry := make(map[string]interface{})
-		err = json.Unmarshal(b, &entry)
-		assert.NoError(t, err)
-
-		assert.Equal(t, "[FILTERED]", entry[k])
-	}
+	t.Log(string(actual))
+	t.Log(string(expected))
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
 }
